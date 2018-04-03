@@ -1,0 +1,2 @@
+string affordance_type
+geometry_msgs/PoseArray affordance_poses
