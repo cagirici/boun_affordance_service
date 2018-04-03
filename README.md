@@ -13,19 +13,19 @@ Usage:
 
 * Initialize the service by 
 ```bash
-rosrun affordance_service affordance_srv.py
+rosrun boun_affordance_service affordance_srv.py
 ```
 
 Now the affordance service is available, scene can be queried by providing the HDD and PCB locations.
 * Run the example client by following command
 
 ```bash
-rosrun affordance_service affordance_client.py
+rosrun boun_affordance_service affordance_client.py
 ```
 
-* Afforded points are published as ```geometry_msgs/PoseArray``` from the ```/leverup_points``` topic.
+* Afforded points are published as custom message ```AffordanceList``` from the ```/computed_affordances``` topic.
 * Check it by
 
 ```
-rostopic echo /leverup_points
+rostopic echo /computed_affordances
 ```
