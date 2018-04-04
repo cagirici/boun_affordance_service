@@ -204,7 +204,7 @@ def handle_asc_service(req):
 
     pcb = req.pcb_polygon.polygon #Polygon()
     #pcb.points = [Point32(0.1, 0.1, 0), Point32(0.1, 1, 0), Point32(1.8, 1, 0), Point32(1.8, 0.1, 0)]
-    samples,confidence = polygon_edge_sample(pcb)
+    samples,normals,confidence = polygon_edge_sample(pcb)
 
 
     affordance_pts = PoseArray()
