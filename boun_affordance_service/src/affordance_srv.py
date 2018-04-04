@@ -42,7 +42,7 @@ def calc(p, hdd_vertex, N=4):
 
         d = pa - c
         d2 = math.sqrt(np.dot(d, d))
-        print "Distance to pt:" + str(d2)
+        #print "Distance to pt:" + str(d2)
         dist_to_edges.append(d2)
     min_dist = min(dist_to_edges)
     return min_dist > 0.01, min_dist, dist_to_edges.index(min_dist)
@@ -72,7 +72,7 @@ def sign(c1, c2):
     return 1 if c2[0]-c1[0] > 0 else -1
 
 
-def polygon_edge_sample(polygon, sample_count=10):
+def polygon_edge_sample_original(polygon, sample_count=10):
     edge_total = 0
 
     N = len(polygon.points);
@@ -129,6 +129,63 @@ def polygon_edge_sample(polygon, sample_count=10):
     print sample_points
     return sample_points
 
+def pdist2(pt1,pt2):
+    return math.sqrt( (pt1.x - pt2.x)**2 + (pt1.y - pt2.y)**2 )
+
+def polygon_edge_sample(polygon, sample_count=5):
+    N = len(polygon.points)
+    print "N is : " , N
+    """
+    current_point = copy.deepcopy(polygon.points[0])
+    current_edge = 0
+
+    edge_dir = [-(polygon.points[0].x - polygon.points[1].x) , -(polygon.points[0].y - polygon.points[1].y)]
+    current_edge_len = pdist2(polygon.points[0],polygon.points[1])
+    enorm = math.sqrt(edge_dir[0] ** 2 + edge_dir[1] ** 2)
+
+    edge_dir[1] *= bin_size / enorm
+    edge_dir[0] *= bin_size / enorm
+    
+    bin_size = current_edge_len / sample_count
+    """
+
+    sample_points = []
+    confidence = []
+    angles = []
+
+    #(ei+1) % N
+    for ei in range(N):
+        edge_dir = [-(polygon.points[ei].x - polygon.points[ (ei+1) % N ].x) , -(polygon.points[ei].y - polygon.points[(ei+1) % N].y)]
+        current_edge_len = pdist2(polygon.points[ei],polygon.points[(ei+1) % N])
+        enorm = math.sqrt(edge_dir[0] ** 2 + edge_dir[1] ** 2)
+        
+        bin_size = current_edge_len / sample_count
+        percent_step = 1/math.floor(sample_count/2)
+        cf = [ 1 - percent_step* abs(math.floor(sample_count/2)-ix ) for ix in range(sample_count)]
+        #print "CF is" ,cf
+        confidence.extend(cf)
+        edge_dir[1] *= bin_size /enorm
+        edge_dir[0] *= bin_size /enorm
+
+
+        edge_normal = [edge_dir[1], -edge_dir[0]]
+
+        current_point = polygon.points[ei]
+
+        for jj in range(sample_count):
+            sample_points.append(current_point)
+            angles.append(edge_normal)
+            current_point = copy.deepcopy(current_point)
+            current_point.x += edge_dir[0]
+            current_point.y += edge_dir[1]
+
+
+    sample_pts = [ [pt.x, pt.y] for pt in sample_points ]
+
+    #print sample_points
+    print "Confidence : " , confidence
+    return sample_pts, angles,  confidence
+
 
 def handle_asc_service(req):
     #print "Affordance Service Request"
@@ -147,20 +204,22 @@ def handle_asc_service(req):
 
     pcb = req.pcb_polygon.polygon #Polygon()
     #pcb.points = [Point32(0.1, 0.1, 0), Point32(0.1, 1, 0), Point32(1.8, 1, 0), Point32(1.8, 0.1, 0)]
-    samples = polygon_edge_sample(pcb)
+    samples,confidence = polygon_edge_sample(pcb)
 
 
     affordance_pts = PoseArray()
     affordance_pts_poses = []
+    affordance_pts_confidences = []
     computed_affordances = AffordanceList()
 
     sample_poses = []
-    for pt in samples:
+    for idx,pt in enumerate(samples):
         sample_poses.append(Pose(Point(pt[0], pt[1], ptsArray[0].z), Quaternion()))
         isok, mindist, minIndex = calc(pt, hdd_vertex, 4)
         if isok:
             affordance_pts_poses.append(Pose(Point(pt[0], pt[1], ptsArray[0].z),Quaternion()))
-        print isok, mindist, minIndex
+            affordance_pts_confidences.append(confidence[idx])
+        #print isok, mindist, minIndex
 
     sample_poses_stamped.poses = sample_poses
     sample_poses_stamped.header.frame_id = req.pcb_polygon.header.frame_id
@@ -169,20 +228,20 @@ def handle_asc_service(req):
     affordance_pts.poses = affordance_pts_poses
     affordance_pts.header.frame_id = req.pcb_polygon.header.frame_id
 
-    print "Affordance!!"
+    #print "Affordance!!"
 
     leverAffordances = Affordance()
     leverAffordances.affordance_type = "leverup"
     leverAffordances.affordance_poses = affordance_pts
-
-    print "Lever done!"
+    leverAffordances.confidence_values = affordance_pts_confidences
+    #print "Lever done!"
 
     screwAffordances = Affordance()
     screwAffordances.affordance_type = "screw"
     screwAffordances.affordance_poses = None
 
 
-    print "screw done!"
+    #print "screw done!"
 
     computed_affordances.affordances.append(leverAffordances)
 
@@ -190,11 +249,11 @@ def handle_asc_service(req):
         computed_affordances.affordances.append(screwAffordances)
 
 
-    print "Computed Affordances!"
+    #print "Computed Affordances!"
 
     resp = ComputeLeverAffordancesResponse(0,computed_affordances)
     
-    print "Response given!"
+    #print "Response given!"
 
     return resp
 def asc_server():

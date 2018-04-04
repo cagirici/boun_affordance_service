@@ -1,2 +1,3 @@
 string affordance_type
 geometry_msgs/PoseArray affordance_poses
+float32[] confidence_values
